@@ -1,0 +1,37 @@
+name: CI/CD to Cloud Run via Cloud Build
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Trigger Cloud Build
+        uses: google-github-actions/cloudbuild-build@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          config: cloudbuild.yaml
+          substitutions: |
+            _REGION=${{ secrets.REGION || 'us-central1' }}
+            _SERVICE=${{ secrets.CLOUD_RUN_SERVICE || 'cloud-run-demo' }}
